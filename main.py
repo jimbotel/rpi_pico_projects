@@ -90,7 +90,8 @@ def tachometer(pin):
 #     global counter
 #     counter[3] += 1
 
-
+# If temp is less or equal than minTemp, FANS will be OFF
+minTemp = 30
 # choose starting PWM based on standard "room temperature" (18C)
 targetPWM = temp2pwm[18]
 # PWM Pins
@@ -148,23 +149,39 @@ while True:
     targetPWM = temp2pwm[int(temp)+1]
 
     oled.fill(0)
-    oled.text("SPEED: {:.1f}%".format(targetPWM),0,5)
-    for i in range(NUM_FANS):
-        oled.text("F{}: {:.0f}".format(i+1,rpms[i]), 0, oledfanrow[i])
+    if (temp <= minTemp):
+        if( relay.value() == 0):
+            relay.value(1)
+        oled.text("LOW TEMP",0,5)
+        oled.text("---",0,oledfanrow[0])
+        oled.text("FANS",0,oledfanrow[1])
+        oled.text("OFF",0,oledfanrow[2])
+        oled.text("---",0,oledfanrow[3])
+
+        print("LOW TEMP -> FANS OFF")
+        print("Temperature: {:.1f}C   Humidity: {:.1f}%".format(temp, hum))
+        print("---------------------")
+
+    else:
+        if( relay.value() == 1):
+            relay.value(0)
+        oled.text("SPEED: {:.1f}%".format(targetPWM),0,5)
+        for i in range(NUM_FANS):
+            oled.text("F{}: {:.0f}".format(i+1,rpms[i]), 0, oledfanrow[i])
+        
+        print("SPEED (PWM): {:.1f}%".format(targetPWM))
+        for i in range(NUM_FANS):
+            print("Fan{}: {:.0f} (counter: {})".format(i+1,rpms[i],counter[i]))
+        print("Temperature: {:.1f}C   Humidity: {:.1f}%".format(temp, hum))
+        print("---------------------")
+    
+        for i in range(NUM_FANS):
+            pwmFan[i].duty_u16(int(targetPWM*65535/100))
+
     oled.text("TEMP:",70, 20)
     oled.text(" {:.1f}C".format(temp), 80, 30)
     oled.text("HUM:", 70, 40)
     oled.text(" {:.1f}%".format(hum), 80, 50)
     oled.show()
-    
-    print("SPEED (PWM): {:.1f}%".format(targetPWM))
-    for i in range(NUM_FANS):
-        oled.text("F{}: {:.0f}".format(i+1,rpms[i]), 0, oledfanrow[i])
-        print("Fan{}: {:.0f} (counter: {})".format(i+1,rpms[i],counter[i]))
-    print("Temperature: {:.1f}C   Humidity: {:.1f}%".format(temp, hum))
-    print("---------------------")
-    
-    for i in range(NUM_FANS):
-        pwmFan[i].duty_u16(int(targetPWM*65535/100))
-        
+            
     sleep(30)
